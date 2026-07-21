@@ -8,7 +8,7 @@
         * {
             margin: 0;
             padding: 0;
-            box-style: border-box;
+            box-sizing: border-box;
         }
         body {
             background: linear-gradient(to bottom, #1a052e, #0b0214);
@@ -23,42 +23,50 @@
         }
         #restartBtn {
             position: absolute;
-            bottom: 20px;
-            padding: 10px 20px;
+            bottom: 30px;
+            padding: 12px 24px;
             background-color: #ffcc00;
             border: none;
-            border-radius: 5px;
+            border-radius: 25px;
             color: #111;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             font-family: sans-serif;
-            transition: transform 0.2s;
+            box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
+            transition: transform 0.2s, background-color 0.2s;
+            -webkit-tap-highlight-color: transparent;
         }
         #restartBtn:hover {
             transform: scale(1.05);
+            background-color: #ffe066;
+        }
+        #restartBtn:active {
+            transform: scale(0.95);
         }
     </style>
 </head>
 <body>
 
     <canvas id="flowerCanvas"></canvas>
-    <button id="restartBtn" onclick="initAnimation()">Ξανά από την αρχή</button>
+    <!-- Το κείμενο άλλαξε σε "Ηλιαχτιδα μου" -->
+    <button id="restartBtn" onclick="initAnimation()">Ηλιαχτιδα μου</button>
 
     <script>
         const canvas = document.getElementById('flowerCanvas');
         const ctx = canvas.getContext('2d');
 
-        // Προσαρμογή μεγέθους canvas στην οθόνη
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
         }
-        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            initAnimation(); // Επανεκκίνηση για σωστά μεγέθη αν αλλάξει ο προσανατολισμός
+        });
         resizeCanvas();
 
         let flowers = [];
-        const startX = canvas.width / 2;
-        const startY = canvas.height - 50;
 
         class Sunflower {
             constructor(x, y) {
@@ -67,17 +75,20 @@
                 this.currentX = x;
                 this.currentY = y;
                 
-                // Τυχαίες γωνίες και μήκη για φυσική κίνηση
-                this.angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.6; 
-                this.targetLength = 250 + Math.random() * 150;
+                // Δυναμικό ύψος μίσχου ανάλογα με το ύψος της οθόνης για να μην βγαίνει εκτός στα κινητά
+                const maxPossibleLength = canvas.height * 0.45; 
+                this.targetLength = maxPossibleLength * (0.8 + Math.random() * 0.4);
+                
+                this.angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5; 
                 this.currentLength = 0;
-                this.growthSpeed = 2 + Math.random() * 2;
+                this.growthSpeed = 1.5 + Math.random() * 1.5;
                 
                 this.flowerSize = 0;
-                this.targetFlowerSize = 35 + Math.random() * 15;
+                // Δυναμικό μέγεθος ανθού ανάλογα με το πλάτος της οθόνης
+                const baseSize = Math.min(canvas.width * 0.06, 40);
+                this.targetFlowerSize = baseSize + Math.random() * (baseSize * 0.3);
                 this.isDoneGrowingStem = false;
                 
-                // Αποθήκευση σημείων για το λύγισμα του μίσχου
                 this.points = [{x: this.startX, y: this.startY}];
             }
 
@@ -85,8 +96,7 @@
                 if (!this.isDoneGrowingStem) {
                     this.currentLength += this.growthSpeed;
                     
-                    // Δημιουργία ελαφριάς καμπύλης στον μίσχο
-                    let curve = Math.sin(this.currentLength * 0.02) * 0.5;
+                    let curve = Math.sin(this.currentLength * 0.02) * 0.4;
                     this.currentX = this.startX + Math.cos(this.angle + curve) * this.currentLength;
                     this.currentY = this.startY + Math.sin(this.angle + curve) * this.currentLength;
                     
@@ -96,51 +106,50 @@
                         this.isDoneGrowingStem = true;
                     }
                 } else if (this.flowerSize < this.targetFlowerSize) {
-                    // Ανάπτυξη του ανθού αφού μεγαλώσει ο μίσχος
-                    this.flowerSize += 0.5;
+                    this.flowerSize += 0.4;
                 }
             }
 
             draw() {
-                // 1. Σχεδίαση Μίσχου (Πράσινο κοτσάνι)
+                // 1. Μίσχος
                 ctx.beginPath();
                 ctx.moveTo(this.points[0].x, this.points[0].y);
                 for (let i = 1; i < this.points.length; i++) {
                     ctx.lineTo(this.points[i].x, this.points[i].y);
                 }
                 ctx.strokeStyle = '#2d5a27';
-                ctx.lineWidth = 6;
+                ctx.lineWidth = Math.max(3, canvas.width * 0.008); // Πιο λεπτό κοτσάνι στα κινητά
                 ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
                 ctx.stroke();
 
-                // 2. Σχεδίαση Ανθού (Ηλιοτρόπιο)
+                // 2. Ανθός
                 if (this.flowerSize > 0) {
                     const fx = this.currentX;
                     const fy = this.currentY;
-
-                    // Σχεδίαση Πετάλων (Κίτρινο)
-                    const petalCount = 16;
+                    const petalCount = 14;
+                    
+                    // Πέταλα
                     ctx.fillStyle = '#ffcc00';
                     for (let i = 0; i < petalCount; i++) {
                         ctx.beginPath();
                         let petalAngle = (i * Math.PI * 2) / petalCount;
                         let px = fx + Math.cos(petalAngle) * this.flowerSize;
                         let py = fy + Math.sin(petalAngle) * this.flowerSize;
-                        ctx.arc(px, py, this.flowerSize * 0.4, 0, Math.PI * 2);
+                        ctx.arc(px, py, this.flowerSize * 0.45, 0, Math.PI * 2);
                         ctx.fill();
                     }
 
-                    // Σχεδίαση Κέντρου (Καφέ)
+                    // Κέντρο
                     ctx.beginPath();
-                    ctx.arc(fx, fy, this.flowerSize * 0.6, 0, Math.PI * 2);
+                    ctx.arc(fx, fy, this.flowerSize * 0.65, 0, Math.PI * 2);
                     ctx.fillStyle = '#4a2c00';
                     ctx.fill();
                     
-                    // Μικρή λεπτομέρεια στο κέντρο
                     ctx.beginPath();
                     ctx.arc(fx, fy, this.flowerSize * 0.5, 0, Math.PI * 2);
                     ctx.strokeStyle = '#362000';
-                    ctx.lineWidth = 2;
+                    ctx.lineWidth = 1.5;
                     ctx.stroke();
                 }
             }
@@ -148,24 +157,24 @@
 
         function initAnimation() {
             flowers = [];
-            resizeCanvas();
-            // Δημιουργία 6 ηλιοτροπίων από το ίδιο σημείο βάσης
+            // Το σημείο εκκίνησης προσαρμόζεται πάντα ακριβώς πάνω από το κουμπί
+            const startX = canvas.width / 2;
+            const startY = canvas.height - 90; 
+
             for (let i = 0; i < 6; i++) {
-                flowers.push(new Sunflower(canvas.width / 2, canvas.height - 20));
+                flowers.push(new Sunflower(startX, startY));
             }
         }
 
         function animate() {
-            // Καθαρισμός canvas με ελαφρύ opacity για εφέ κίνησης αν χρειαστεί
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Σχεδίαση "χώματος" / βάσης
+            // Βάση / Χώμα (Προσαρμοσμένο μέγεθος)
             ctx.beginPath();
-            ctx.arc(canvas.width / 2, canvas.height + 100, 130, 0, Math.PI * 2);
+            ctx.arc(canvas.width / 2, canvas.height + 20, Math.min(canvas.width * 0.25, 120), 0, Math.PI * 2);
             ctx.fillStyle = '#3e2723';
             ctx.fill();
 
-            // Ενημέρωση και σχεδίαση κάθε λουλουδιού
             flowers.forEach(flower => {
                 flower.update();
                 flower.draw();
@@ -174,7 +183,6 @@
             requestAnimationFrame(animate);
         }
 
-        // Εκκίνηση
         initAnimation();
         animate();
     </script>
