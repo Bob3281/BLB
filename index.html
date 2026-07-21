@@ -36,6 +36,7 @@
             box-shadow: 0 4px 15px rgba(255, 204, 0, 0.4);
             transition: transform 0.2s, background-color 0.2s;
             -webkit-tap-highlight-color: transparent;
+            z-index: 10;
         }
         #restartBtn:hover {
             transform: scale(1.05);
@@ -49,7 +50,6 @@
 <body>
 
     <canvas id="flowerCanvas"></canvas>
-    <!-- Το κείμενο άλλαξε σε "Ηλιαχτιδα μου" -->
     <button id="restartBtn" onclick="initAnimation()">Ηλιαχτιδα μου</button>
 
     <script>
@@ -62,7 +62,7 @@
         }
         window.addEventListener('resize', () => {
             resizeCanvas();
-            initAnimation(); // Επανεκκίνηση για σωστά μεγέθη αν αλλάξει ο προσανατολισμός
+            initAnimation();
         });
         resizeCanvas();
 
@@ -75,18 +75,19 @@
                 this.currentX = x;
                 this.currentY = y;
                 
-                // Δυναμικό ύψος μίσχου ανάλογα με το ύψος της οθόνης για να μην βγαίνει εκτός στα κινητά
-                const maxPossibleLength = canvas.height * 0.45; 
-                this.targetLength = maxPossibleLength * (0.8 + Math.random() * 0.4);
+                // Αυστηρός περιορισμός ύψους: έως 38% της οθόνης για να μην βγαίνει ποτέ πάνω
+                const maxPossibleLength = canvas.height * 0.38; 
+                this.targetLength = maxPossibleLength * (0.7 + Math.random() * 0.3);
                 
-                this.angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.5; 
+                // Πιο στενή γωνία εξάπλωσης (0.4 αντί για 0.5) για να μην βγαίνουν ποτέ αριστερά/δεξιά στα κινητά
+                this.angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.4; 
                 this.currentLength = 0;
                 this.growthSpeed = 1.5 + Math.random() * 1.5;
                 
                 this.flowerSize = 0;
-                // Δυναμικό μέγεθος ανθού ανάλογα με το πλάτος της οθόνης
-                const baseSize = Math.min(canvas.width * 0.06, 40);
-                this.targetFlowerSize = baseSize + Math.random() * (baseSize * 0.3);
+                // Μικρότερο μέγεθος ανθού για να χωράνε πολλά λουλούδια χωρίς να κρύβουν το ένα το άλλο
+                const baseSize = Math.min(canvas.width * 0.05, 30);
+                this.targetFlowerSize = baseSize + Math.random() * (baseSize * 0.25);
                 this.isDoneGrowingStem = false;
                 
                 this.points = [{x: this.startX, y: this.startY}];
@@ -96,10 +97,16 @@
                 if (!this.isDoneGrowingStem) {
                     this.currentLength += this.growthSpeed;
                     
-                    let curve = Math.sin(this.currentLength * 0.02) * 0.4;
+                    // Ελεγχόμενη καμπύλη μίσχου
+                    let curve = Math.sin(this.currentLength * 0.02) * 0.3;
                     this.currentX = this.startX + Math.cos(this.angle + curve) * this.currentLength;
                     this.currentY = this.startY + Math.sin(this.angle + curve) * this.currentLength;
                     
+                    // Ασφάλεια: Κρατάει τα λουλούδια μέσα στα όρια του πλάτους του canvas
+                    const margin = this.targetFlowerSize * 1.5;
+                    if (this.currentX < margin) this.currentX = margin;
+                    if (this.currentX > canvas.width - margin) this.currentX = canvas.width - margin;
+
                     this.points.push({x: this.currentX, y: this.currentY});
 
                     if (this.currentLength >= this.targetLength) {
@@ -118,7 +125,7 @@
                     ctx.lineTo(this.points[i].x, this.points[i].y);
                 }
                 ctx.strokeStyle = '#2d5a27';
-                ctx.lineWidth = Math.max(3, canvas.width * 0.008); // Πιο λεπτό κοτσάνι στα κινητά
+                ctx.lineWidth = Math.max(2.5, canvas.width * 0.006); 
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.stroke();
@@ -127,7 +134,7 @@
                 if (this.flowerSize > 0) {
                     const fx = this.currentX;
                     const fy = this.currentY;
-                    const petalCount = 14;
+                    const petalCount = 12;
                     
                     // Πέταλα
                     ctx.fillStyle = '#ffcc00';
@@ -142,14 +149,14 @@
 
                     // Κέντρο
                     ctx.beginPath();
-                    ctx.arc(fx, fy, this.flowerSize * 0.65, 0, Math.PI * 2);
+                    ctx.arc(fx, fy, this.flowerSize * 0.6, 0, Math.PI * 2);
                     ctx.fillStyle = '#4a2c00';
                     ctx.fill();
                     
                     ctx.beginPath();
-                    ctx.arc(fx, fy, this.flowerSize * 0.5, 0, Math.PI * 2);
+                    ctx.arc(fx, fy, this.flowerSize * 0.45, 0, Math.PI * 2);
                     ctx.strokeStyle = '#362000';
-                    ctx.lineWidth = 1.5;
+                    ctx.lineWidth = 1;
                     ctx.stroke();
                 }
             }
@@ -157,11 +164,11 @@
 
         function initAnimation() {
             flowers = [];
-            // Το σημείο εκκίνησης προσαρμόζεται πάντα ακριβώς πάνω από το κουμπί
             const startX = canvas.width / 2;
             const startY = canvas.height - 90; 
 
-            for (let i = 0; i < 6; i++) {
+            // Αυξήθηκε ο αριθμός σε 12 ηλιοτρόπια για πιο πλούσιο εφέ
+            for (let i = 0; i < 12; i++) {
                 flowers.push(new Sunflower(startX, startY));
             }
         }
@@ -169,9 +176,9 @@
         function animate() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Βάση / Χώμα (Προσαρμοσμένο μέγεθος)
+            // Βάση / Χώμα
             ctx.beginPath();
-            ctx.arc(canvas.width / 2, canvas.height + 20, Math.min(canvas.width * 0.25, 120), 0, Math.PI * 2);
+            ctx.arc(canvas.width / 2, canvas.height + 20, Math.min(canvas.width * 0.22, 100), 0, Math.PI * 2);
             ctx.fillStyle = '#3e2723';
             ctx.fill();
 
