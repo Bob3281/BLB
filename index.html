@@ -69,41 +69,47 @@
         let flowers = [];
 
         class Sunflower {
-            constructor(x, y) {
+            constructor(x, y, delay) {
                 this.startX = x;
                 this.startY = y;
                 this.currentX = x;
                 this.currentY = y;
+                this.delay = delay; // Καθυστέρηση για να μην φυτρώνουν όλα μαζί
                 
-                // Αυστηρός περιορισμός ύψους: έως 38% της οθόνης για να μην βγαίνει ποτέ πάνω
+                // Ύψος ασφαλείας για να μην βγαίνουν ποτέ εκτός οθόνης
                 const maxPossibleLength = canvas.height * 0.38; 
-                this.targetLength = maxPossibleLength * (0.7 + Math.random() * 0.3);
+                this.targetLength = maxPossibleLength * (0.6 + Math.random() * 0.4);
                 
-                // Πιο στενή γωνία εξάπλωσης (0.4 αντί για 0.5) για να μην βγαίνουν ποτέ αριστερά/δεξιά στα κινητά
-                this.angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.4; 
+                // Ελεγχόμενη γωνία εξάπλωσης για να μένουν μέσα στα πλαϊνά όρια
+                this.angle = -Math.PI / 2 + (Math.random() - 0.5) * 0.45; 
                 this.currentLength = 0;
-                this.growthSpeed = 1.5 + Math.random() * 1.5;
+                this.growthSpeed = 1.8 + Math.random() * 1.5;
                 
                 this.flowerSize = 0;
-                // Μικρότερο μέγεθος ανθού για να χωράνε πολλά λουλούδια χωρίς να κρύβουν το ένα το άλλο
-                const baseSize = Math.min(canvas.width * 0.05, 30);
-                this.targetFlowerSize = baseSize + Math.random() * (baseSize * 0.25);
+                // Ιδανικό μέγεθος για να χωράνε πολλά λουλούδια μαζί
+                const baseSize = Math.min(canvas.width * 0.045, 25);
+                this.targetFlowerSize = baseSize + Math.random() * (baseSize * 0.3);
                 this.isDoneGrowingStem = false;
                 
                 this.points = [{x: this.startX, y: this.startY}];
             }
 
             update() {
+                // Αν υπάρχει ακόμα καθυστέρηση, μείωσέ την και μην αναπτυχθείς ακόμα
+                if (this.delay > 0) {
+                    this.delay--;
+                    return;
+                }
+
                 if (!this.isDoneGrowingStem) {
                     this.currentLength += this.growthSpeed;
                     
-                    // Ελεγχόμενη καμπύλη μίσχου
-                    let curve = Math.sin(this.currentLength * 0.02) * 0.3;
+                    let curve = Math.sin(this.currentLength * 0.02) * 0.35;
                     this.currentX = this.startX + Math.cos(this.angle + curve) * this.currentLength;
                     this.currentY = this.startY + Math.sin(this.angle + curve) * this.currentLength;
                     
-                    // Ασφάλεια: Κρατάει τα λουλούδια μέσα στα όρια του πλάτους του canvas
-                    const margin = this.targetFlowerSize * 1.5;
+                    // Απόλυτη ασφάλεια για τα πλαϊνά όρια της οθόνης
+                    const margin = this.targetFlowerSize * 1.2;
                     if (this.currentX < margin) this.currentX = margin;
                     if (this.currentX > canvas.width - margin) this.currentX = canvas.width - margin;
 
@@ -113,11 +119,14 @@
                         this.isDoneGrowingStem = true;
                     }
                 } else if (this.flowerSize < this.targetFlowerSize) {
-                    this.flowerSize += 0.4;
+                    this.flowerSize += 0.5;
                 }
             }
 
             draw() {
+                // Μην σχεδιάζεις το λουλούδι αν δεν έχει ξεκινήσει να φυτρώνει
+                if (this.delay > 0) return;
+
                 // 1. Μίσχος
                 ctx.beginPath();
                 ctx.moveTo(this.points[0].x, this.points[0].y);
@@ -125,7 +134,7 @@
                     ctx.lineTo(this.points[i].x, this.points[i].y);
                 }
                 ctx.strokeStyle = '#2d5a27';
-                ctx.lineWidth = Math.max(2.5, canvas.width * 0.006); 
+                ctx.lineWidth = Math.max(2, canvas.width * 0.005); 
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.stroke();
@@ -167,9 +176,10 @@
             const startX = canvas.width / 2;
             const startY = canvas.height - 90; 
 
-            // Αυξήθηκε ο αριθμός σε 12 ηλιοτρόπια για πιο πλούσιο εφέ
-            for (let i = 0; i < 12; i++) {
-                flowers.push(new Sunflower(startX, startY));
+            // Δημιουργία 24 ηλιοτροπίων με κλιμακωτή καθυστέρηση (0 έως 90 frames)
+            for (let i = 0; i < 24; i++) {
+                let randomDelay = Math.random() * 90; 
+                flowers.push(new Sunflower(startX, startY, randomDelay));
             }
         }
 
